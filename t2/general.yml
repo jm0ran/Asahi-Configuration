@@ -1,0 +1,110 @@
+# General Applications
+- hosts: t2
+  connection: ssh
+  tasks:
+    - name: Ensure apt packages are up to date
+      become: true
+      ansible.builtin.apt:
+        update_cache: yes
+        force_apt_get: yes
+        cache_valid_time: 3600
+    
+    - name: Install prerequisite packages
+      become: true
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+
+    - name: Create keyrings directory
+      become: true
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Download Docker GPG key
+      become: true
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.gpg
+        mode: '0644'
+
+    - name: Add Docker apt repository
+      become: true
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        filename: docker
+        state: present
+
+
+    - name: Install Docker Engine
+      become: true
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+        update_cache: yes
+
+    - name: Ensure Docker service is started and enabled
+      become: true
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add current user to docker group
+      become: true
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    - name: Copy docker-compose files to appdata
+      ansible.builtin.copy:
+        src: ./compose-files/
+        dest: "/home/{{ ansible_user }}/compose-files"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+        directory_mode: '0755'
+
+    - name: Create appdata folder at user's home directory
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/appdata"
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Create pihole folder in appdata
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/appdata/pihole"
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+    
+    - name: Create a nginx-manager folder in appdata
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/appdata/nginx-manager"
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Create a letsencrypt folder in appdata
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/appdata/letsencrypt"
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    
